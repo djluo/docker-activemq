@@ -17,8 +17,9 @@ RUN export http_proxy="http://172.17.42.1:8080/" \
                activemq/README.txt   \
                activemq/webapps-demo
 
-COPY ./cmd.sh        /activemq/cmd.sh
-COPY ./entrypoint.pl /entrypoint.pl
+COPY ./cmd.sh           /activemq/cmd.sh
+COPY ./entrypoint.pl    /entrypoint.pl
+COPY ./log4j.properties /activemq/conf/
 
 VOLUME /activemq/data
 

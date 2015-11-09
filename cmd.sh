@@ -22,7 +22,7 @@ export ACTIVEMQ_HOME ACTIVEMQ_BASE ACTIVEMQ_CONF ACTIVEMQ_DATA ACTIVEMQ_CLASSPAT
 if [ -f  "${JDK_OPT}" ];then
   source "${JDK_OPT}"
 else
-  JDK_OPTIONS="-Xms1G -Xmx1G"
+  JAVA_OPTS="-Xms1G -Xmx1G"
 fi
 
 exec /home/jdk/bin/java $JAVA_OPTS \
