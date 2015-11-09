@@ -29,6 +29,7 @@ for my $dir (@dirs){
   system("mkdir", "/activemq/$dir") unless ( -d "/activemq/$dir" );
   system("chown", "docker.docker", "-R", "/activemq/$dir")  if ( -d "/activemq/$dir" );
 }
+system("chmod","750", "/activemq/data");
 
 # 切换当前运行用户,先切GID.
 #$GID = $EGID = $gid;
