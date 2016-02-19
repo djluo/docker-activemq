@@ -21,6 +21,9 @@ export ACTIVEMQ_HOME ACTIVEMQ_BASE ACTIVEMQ_CONF ACTIVEMQ_DATA ACTIVEMQ_CLASSPAT
 # java参数等配置
 if [ -f  "${JDK_OPT}" ];then
   source "${JDK_OPT}"
+elif [ -n "$JAVA_OPTS" ] ;then
+  # 使用环境变量中的设置
+  :
 else
   JAVA_OPTS="-Xms1G -Xmx1G"
 fi
