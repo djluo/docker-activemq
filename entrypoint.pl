@@ -11,10 +11,12 @@
 # 最终: 使用perl脚本进行添加和切换操作. 从环境变量User_Id获取用户信息.
 
 use strict;
+use Cwd;
 #use English '-no_match_vars';
 
 my $uid = 1000;
 my $gid = 1000;
+my $pwd = cwd();
 
 $uid = $gid = $ENV{'User_Id'} if $ENV{'User_Id'} =~ /\d+/;
 
@@ -24,12 +26,16 @@ $uid = $gid = $ENV{'User_Id'} if $ENV{'User_Id'} =~ /\d+/;
 unless (getpwuid("$uid")){
   system("/usr/sbin/useradd", "-U", "-u $uid", "-m", "docker");
 }
-my @dirs = ("conf", "data", "tmp", "logs");
+my @dirs = ("logs", "data", "tmp");
 for my $dir (@dirs){
-  system("mkdir", "/activemq/$dir") unless ( -d "/activemq/$dir" );
-  system("chown", "docker.docker", "-R", "/activemq/$dir")  if ( -d "/activemq/$dir" );
+  system("mkdir", "-pv", "$pwd/$dir")             unless ( -d "$pwd/$dir" );
+  system("chown", "docker.docker", "-R", "$pwd/$dir") if ( -d "$pwd/$dir" );
 }
-system("chmod","750", "/activemq/data");
+system("chmod","750", "$pwd/data");
+
+my $log4j = "/activemq/conf/log4j.properties";
+system("sed", "-i", "s%\(^log4j.appender.audit.file=\).*%\1$pwd/logs/audit.log%",      $log4j);
+system("sed", "-i", "s%\(^log4j.appender.logfile.file=\).*%\1$pwd/logs/activemq.log%", $log4j);
 
 # 切换当前运行用户,先切GID.
 #$GID = $EGID = $gid;
@@ -44,4 +50,29 @@ $ENV{'HOME'} = "/home/docker";
 #print CRON ("$min 02 * * * (/tomcat/gzip.sh >/dev/null 2>&1)\n");
 #close(CRON);
 
-exec(@ARGV);
+my @JAVA_OPTS = split(/ /,$ENV{'JAVA_OPTS'});
+
+open(STDOUT,"|/usr/bin/cronolog $pwd/logs/stdout.txt-%Y%m%d") or die "$!";
+open(STDERR,"|/usr/bin/cronolog $pwd/logs/stderr.txt-%Y%m%d") or die "$!";
+
+my @args=(
+  "-Djava.util.logging.config.file=logging.properties",
+  "-Djava.security.auth.login.config=/activemq/conf/login.config",
+  "-Dcom.sun.management.jmxremote",
+  "-Dcom.sun.management.jmxremote.ssl=false",
+  "-Dcom.sun.management.jmxremote.port=9000",
+  "-Dcom.sun.management.jmxremote.rmi.port=9000",
+  "-Dcom.sun.management.jmxremote.local.only=false",
+  "-Dcom.sun.management.jmxremote.authenticate=false",
+  "-Djava.awt.headless=true",
+  "-Dactivemq.home=/activemq",
+  "-Dactivemq.base=/activemq",
+  "-Dactivemq.conf=/activemq/conf",
+  "-Dactivemq.data=$pwd/data",
+  "-Djava.io.tmpdir=$pwd/tmp",
+  "-Dactivemq.classpath=/activemq/conf",
+  "-jar", "/activemq/bin/activemq.jar",
+  "start"
+);
+
+exec("/home/jdk/bin/java", @JAVA_OPTS, @args);
