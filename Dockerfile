@@ -19,13 +19,14 @@ RUN export http_proxy="http://172.17.42.1:8080/" \
     && find /activemq/lib/ -type f -exec chmod 644 {} \; \
     && rm -rfv activemq/activemq-all-${MQ_VER}.jar \
                activemq/docs/        \
+               activemq/data/        \
                activemq/NOTICE       \
                activemq/LICENSE      \
                activemq/examples     \
                activemq/README.txt   \
                activemq/webapps-demo
 
+COPY  ./activemq.xml  /activemq/conf/
 COPY  ./entrypoint.pl /entrypoint.pl
-VOLUME /activemq/data
 
 CMD ["/entrypoint.pl"]

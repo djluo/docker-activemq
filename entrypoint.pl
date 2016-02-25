@@ -26,6 +26,8 @@ $uid = $gid = $ENV{'User_Id'} if $ENV{'User_Id'} =~ /\d+/;
 unless (getpwuid("$uid")){
   system("/usr/sbin/useradd", "-U", "-u $uid", "-m", "docker");
 }
+
+# 确保目录可写
 my @dirs = ("logs", "data", "tmp");
 for my $dir (@dirs){
   system("mkdir", "-pv", "$pwd/$dir")             unless ( -d "$pwd/$dir" );
@@ -33,9 +35,70 @@ for my $dir (@dirs){
 }
 system("chmod","750", "$pwd/data");
 
+# 删除其他协议,并放大连接数限制
+my $conf  = "/activemq/conf/activemq.xml";
+system("sed", "-i",
+  "-e", '/transportConnector name="ws"/d',
+  "-e", '/transportConnector name="amqp"/d',
+  "-e", '/transportConnector name="mqtt"/d',
+  "-e", '/transportConnector name="stomp"/d',
+  "-e", '/transportConnector name/s/1000/32768/',
+  $conf);
+
+# 改用NIO协议
+my $use_nio = 1;
+   $use_nio = 0 if $ENV{'use_nio'} =~ /no/;
+
+if ($use_nio) {
+  system("sed", "-i",
+    "-e", '/transportConnector name/s/tcp/nio/',
+    "-e", '/transportConnector name/s/openwire/nio/',
+    $conf);
+}
+
+# 调整broker的用户名密码
+my $use_pass = 1;
+   $use_pass = 0 if $ENV{'use_pass'} =~ /no/;
+
+if ($use_pass) {
+  # 使用密码
+  my $username = "docker";
+  my $password = "docker";
+  my $credentials = "/activemq/conf/credentials.properties";
+
+  $username = $ENV{'activemq_username'} if $ENV{'activemq_username'};
+  $password = $ENV{'activemq_password'} if $ENV{'activemq_password'};
+
+  system("sed", "-i",
+    "-e", "s%\\(^guest.password=\\).*%\\1$password%",
+    "-e", "s%\\(^activemq.password=\\).*%\\1$password%",
+    "-e", "s%\\(^activemq.username=\\).*%\\1$username%",
+    $credentials);
+}else{
+  # 不使用密码
+  system("sed", "-i", '/XXX/,/XXX/d', $conf);
+}
+
+# 调整admin的用户名密码
+my $jetty_username = "docker";
+my $jetty_password = "docker";
+my $jetty = "/activemq/conf/jetty-realm.properties";
+
+$jetty_username = $ENV{'jetty_username'} if $ENV{'jetty_username'};
+$jetty_password = $ENV{'jetty_password'} if $ENV{'jetty_password'};
+
+open(REALM,'>', $jetty) or die "$!";
+print REALM "$jetty_username: $jetty_password, admin\n";
+close(REALM);
+
+# 调整日志路径
 my $log4j = "/activemq/conf/log4j.properties";
-system("sed", "-i", "s%\(^log4j.appender.audit.file=\).*%\1$pwd/logs/audit.log%",      $log4j);
-system("sed", "-i", "s%\(^log4j.appender.logfile.file=\).*%\1$pwd/logs/activemq.log%", $log4j);
+system("sed", "-i", "s%\\(^log4j.appender.audit.file=\\).*%\\1$pwd/logs/audit.log%",      $log4j);
+system("sed", "-i", "s%\\(^log4j.appender.logfile.file=\\).*%\\1$pwd/logs/activemq.log%", $log4j);
+
+# 设置软链接：确保目录结构的可读性
+system("ln", "-sv", "/activemq/conf/");
+system("ln", "-sv", "$pwd/data/", "/activemq/");
 
 # 切换当前运行用户,先切GID.
 #$GID = $EGID = $gid;
@@ -57,7 +120,6 @@ open(STDERR,"|/usr/bin/cronolog $pwd/logs/stderr.txt-%Y%m%d") or die "$!";
 
 my @args=(
   "-Djava.util.logging.config.file=logging.properties",
-  "-Djava.security.auth.login.config=/activemq/conf/login.config",
   "-Dcom.sun.management.jmxremote",
   "-Dcom.sun.management.jmxremote.ssl=false",
   "-Dcom.sun.management.jmxremote.port=9000",
