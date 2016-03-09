@@ -118,12 +118,15 @@ my @JAVA_OPTS = split(/ /,$ENV{'JAVA_OPTS'});
 open(STDOUT,"|/usr/bin/cronolog $pwd/logs/stdout.txt-%Y%m%d") or die "$!";
 open(STDERR,"|/usr/bin/cronolog $pwd/logs/stderr.txt-%Y%m%d") or die "$!";
 
+my $jmx_port = "9000";
+   $jmx_port = $ENV{'jmx_port'} if $ENV{'jmx_port'};
+
 my @args=(
   "-Djava.util.logging.config.file=logging.properties",
   "-Dcom.sun.management.jmxremote",
   "-Dcom.sun.management.jmxremote.ssl=false",
-  "-Dcom.sun.management.jmxremote.port=9000",
-  "-Dcom.sun.management.jmxremote.rmi.port=9000",
+  "-Dcom.sun.management.jmxremote.port=$jmx_port",
+  "-Dcom.sun.management.jmxremote.rmi.port=$jmx_port",
   "-Dcom.sun.management.jmxremote.local.only=false",
   "-Dcom.sun.management.jmxremote.authenticate=false",
   "-Djava.awt.headless=true",
