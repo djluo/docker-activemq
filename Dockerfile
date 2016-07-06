@@ -1,7 +1,7 @@
 FROM       docker.xlands-inc.com/baoyu/java8
 MAINTAINER djluo <dj.luo@baoyugame.com>
 
-ENV MQ_VER  5.13.1
+ENV MQ_VER  5.13.3
 ENV MQ_URL  http://mirror.bit.edu.cn/apache/activemq/${MQ_VER}/apache-activemq-${MQ_VER}-bin.tar.gz
 ENV ASC_URL https://www.apache.org/dist/activemq/${MQ_VER}/apache-activemq-${MQ_VER}-bin.tar.gz.asc
 
